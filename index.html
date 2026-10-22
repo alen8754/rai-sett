@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAI - Registro Alimentario ISETT</title>
+
+    <!-- PWA / App Mobile Meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#059669">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@0.468.0"></script>
+
+    <!-- QRCode JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        isett: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b'
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; user-select: none; }
+        .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .fade-in { animation: fadeIn .25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .pulse-live { animation: pulseLive 2s infinite; }
+        @keyframes pulseLive { 0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,.6); } 50% { box-shadow: 0 0 0 8px rgba(16,185,129,0); } }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; }
+    
+        .nav-item{width:100%;display:flex;align-items:center;gap:.75rem;padding:.6rem .8rem;border-radius:.75rem;font-size:.75rem;font-weight:700;color:#64748b;transition:all .2s}
+        .dark .nav-item{color:#94a3b8}.nav-item:hover{background:#f1f5f9;color:#0f172a}
+        .dark .nav-item:hover{background:#1e293b;color:#fff}
+        .nav-item.active{background:#ecfdf5;color:#047857}
+        .dark .nav-item.active{background:rgba(6,95,70,.3);color:#34d399}
+        .nav-item svg{width:1.1rem;height:1.1rem}
+        .status-badge{font-size:10px;font-weight:900;padding:3px 10px;border-radius:99px;text-transform:uppercase}
+        .status-badge.pending{background:#f1f5f9;color:#64748b}.status-badge.confirmed{background:#dcfce7;color:#15803d}.status-badge.cancelled{background:#ffe4e6;color:#be123c}
+        .metric-card{background:#fff;border:1px solid #e2e8f0;border-radius:1.25rem;padding:1rem}
+        .dark .metric-card{background:#0f172a;border-color:#1e293b}
+        .mobile-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:9px;font-weight:800;color:#94a3b8}
+        .mobile-tab.active{color:#059669}.mobile-tab svg{width:1.2rem;height:1.2rem}
+        input,textarea{user-select:text}
+        .card{background:#fff;border:1px solid #e2e8f0;border-radius:1.5rem;padding:1.25rem}
+        .dark .card{background:#0f172a;border-color:#1e293b}
+        .inp{padding:.55rem .8rem;border-radius:.75rem;border:1px solid #e2e8f0;background:#f8fafc;font-weight:700;font-size:.75rem;outline:none}
+        .inp:focus{border-color:#10b981}
+        .dark .inp{background:#1e293b;border-color:#334155;color:#f1f5f9}
+        .btn{padding:.55rem 1rem;border-radius:.75rem;background:#059669;color:#fff;font-weight:700;font-size:.75rem;transition:.2s}
+        .btn:hover{background:#047857}
+        .btn-alt{padding:.55rem 1rem;border-radius:.75rem;background:#f1f5f9;font-weight:700;font-size:.75rem;transition:.2s}
+        .btn-alt:hover{background:#e2e8f0}
+        .dark .btn-alt{background:#1e293b}.dark .btn-alt:hover{background:#334155}
+        .pill{font-size:9px;font-weight:800;padding:2px 8px;border-radius:99px;background:#f1f5f9;color:#475569}
+        .dark .pill{background:#1e293b;color:#cbd5e1}
+        .scan-line{position:absolute;left:0;right:0;height:2px;background:#10b981;box-shadow:0 0 15px #10b981;animation:scan 2s ease-in-out infinite alternate}
+        @keyframes scan{from{top:10%}to{top:90%}}
+        button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #10b981;outline-offset:2px}
+        @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+        @media print{header,aside,nav,#toast,button{display:none!important}}
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-full flex flex-col antialiased selection:bg-isett-500 selection:text-white">
+
+    <!-- SPLASH SCREEN DE ENTRADA -->
+    <div id="splash-screen" class="fixed inset-0 z-[200] bg-gradient-to-br from-isett-700 via-isett-800 to-slate-900 text-white flex flex-col items-center justify-center p-6 transition-opacity duration-500">
+        <div class="relative flex items-center justify-center mb-6">
+            <div class="w-20 h-20 rounded-3xl bg-white/10 glass flex items-center justify-center border border-white/20 shadow-2xl animate-bounce">
+                <i data-lucide="utensils-crossed" class="w-10 h-10 text-isett-100"></i>
+            </div>
+            <div class="absolute -inset-2 rounded-full bg-isett-500/20 blur-xl"></div>
+        </div>
+        <h1 class="text-3xl font-black tracking-tight text-center">RAI ISETT</h1>
+        <p class="text-xs font-semibold text-isett-200 mt-1 uppercase tracking-widest text-center">Registro Alimentario ISETT</p>
+        <p class="text-[11px] text-slate-300 mt-4 max-w-xs text-center leading-relaxed">Optimizando el Programa de Alimentación Escolar (PAE JUNAEB)</p>
+        <div class="mt-8 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-isett-400 animate-ping"></span>
+            <span class="text-[10px] font-bold text-isett-200 uppercase tracking-wide">Cargando datos localmente...</span>
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="app" class="flex-1 flex flex-col min-h-screen">
+
+        <!-- HEADER TOP BAR -->
+        <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 glass border-b border-slate-200 dark:border-slate-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6">
+                <div class="h-16 flex items-center justify-between gap-3">
+                    
+                    <!-- LOGO & BRAND -->
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                            <i data-lucide="menu" class="w-5 h-5 text-slate-600 dark:text-slate-300"></i>
+                        </button>
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-isett-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-isett-600/20">
+                                <i data-lucide="utensils" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">RAI</span>
+                                    <span class="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-isett-100 dark:bg-isett-950 text-isett-700 dark:text-isett-400 border border-isett-200 dark:border-isett-800">ISETT</span>
+                                </div>
+                                <p class="text-[9px] text-slate-400 font-medium leading-none hidden sm:block">Control PAE JUNAEB</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CLOCK & STATUS (CENTRO) -->
+                    <div class="hidden md:flex items-center gap-3">
+                        <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 rounded-xl px-3 py-1.5 border border-slate-200/50 dark:border-slate-700/50">
+                            <span class="w-2 h-2 rounded-full bg-isett-500 pulse-live"></span>
+                            <span class="text-[10px] font-bold text-slate-600 dark:text-slate-300">PAE ACTIVO</span>
+                        </div>
+                        <div class="text-xs font-bold text-slate-500 dark:text-slate-400 tabular-nums">
+                            <span id="header-clock">00:00:00</span>
+                        </div>
+                    </div>
+
+                    <!-- ACCIONES DERECHA -->
+                    <div class="flex items-center gap-2">
+                        <!-- Dark Mode Toggle -->
+                        <button onclick="toggleDarkMode()" class="w-9 h-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition text-slate-600 dark:text-slate-300" title="Cambiar Tema">
+                            <i id="theme-icon" data-lucide="moon" class="w-4 h-4"></i>
+                        </button>
+
+                        <!-- Selector de Rol (Simulación) -->
+                        <button onclick="openRoleSelector()" class="flex items-center gap-2 p-1.5 pr-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                            <div id="role-avatar" class="w-7 h-7 rounded-lg bg-isett-600 text-white flex items-center justify-center text-[10px] font-black">
+                                ES
+                            </div>
+                            <div class="text-left hidden sm:block">
+                                <p id="role-name" class="text-xs font-extrabold leading-tight">Vega Alarcón</p>
+                                <p id="role-title" class="text-[9px] text-slate-400 leading-none">Estudiante 1°B</p>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTENEDOR PRINCIPAL: SIDEBAR + CONTENT -->
+        <div class="max-w-7xl mx-auto w-full flex-1 flex">
+
+            <!-- SIDEBAR BARRA LATERAL ACCESO MULTI-ÁREA -->
+            <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full lg:translate-x-0 lg:static lg:z-auto transition-transform duration-200 ease-in-out flex flex-col">
+                <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between lg:hidden">
+                    <span class="text-xs font-black text-slate-400 uppercase tracking-wider">Menú RAI</span>
+                    <button onclick="toggleSidebar()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="p-4 space-y-6 flex-1 overflow-y-auto">
+                    <!-- ÁREA ESTUDIANTES -->
+                    <div>
+                        <p class="text-[9px] font-black uppercase tracking-widest text-isett-600 dark:text-isett-400 px-3 mb-2">Área Estudiante</p>
+                        <nav class="space-y-1">
+                            <button onclick="goTo('student-dash')" data-nav="student-dash" class="nav-item active">
+                                <i data-lucide="home"></i> Mi Almuerzo
+                            </button>
+                            <button onclick="goTo('student-menu')" data-nav="student-menu" class="nav-item">
+                                <i data-lucide="utensils-crossed"></i> Menú JUNAEB
+                            </button>
+                            <button onclick="goTo('student-impact')" data-nav="student-impact" class="nav-item">
+                                <i data-lucide="leaf"></i> Impacto Ecológico
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- ÁREA COCINA Y MANIPULADORAS -->
+                    <div>
+                        <p class="text-[9px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 px-3 mb-2">Personal de Cocina</p>
+                        <nav class="space-y-1">
+                            <button onclick="goTo('kitchen-scanner')" data-nav="kitchen-scanner" class="nav-item">
+                                <i data-lucide="qr-code"></i> Escáner QR
+                            </button>
+                            <button onclick="goTo('kitchen-dashboard')" data-nav="kitchen-dashboard" class="nav-item">
+                                <i data-lucide="chef-hat"></i> Control de Raciones
+                            </button>
+                            <button onclick="goTo('kitchen-surplus')" data-nav="kitchen-surplus" class="nav-item">
+                                <i data-lucide="repeat"></i> Raciones Sobrantes
+                            </button>
+                            <button onclick="goTo('kitchen-waste')" data-nav="kitchen-waste" class="nav-item">
+                                <i data-lucide="trash-2"></i> Registro Desperdicio
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- ÁREA INSPECTORÍA Y PROFESORES -->
+                    <div>
+                        <p class="text-[9px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 px-3 mb-2">Inspectoría / Encargado PAE</p>
+                        <nav class="space-y-1">
+                            <button onclick="goTo('inspector-view')" data-nav="inspector-view" class="nav-item">
+                                <i data-lucide="user-check"></i> Marcaje por Curso
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- ÁREA ADMINISTRACIÓN -->
+                    <div>
+                        <p class="text-[9px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400 px-3 mb-2">Administración ISETT</p>
+                        <nav class="space-y-1">
+                            <button onclick="goTo('admin-view')" data-nav="admin-view" class="nav-item">
+                                <i data-lucide="bar-chart-3"></i> Reporte JUNAEB
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- INFO INFERIOR LICEAL -->
+                <div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-isett-500"></span>
+                        <p class="text-[10px] font-extrabold">ISETT Temuco</p>
+                    </div>
+                    <p class="text-[9px] text-slate-400 mt-1">Programa Alimentación Escolar PAE 2026</p>
+                </div>
+            </aside>
+
+            <!-- OVERLAY MOVIL SIDEBAR -->
+            <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm hidden lg:hidden"></div>
+
+            <!-- MAIN CONTENT AREA -->
+            <main class="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8">
+
+                <!-- =========================================================
+                     1. DASHBOARD ESTUDIANTE
+                ========================================================== -->
+                <section id="page-student-dash" class="page-section fade-in space-y-6">
+                    <!-- BANNER BIENVENIDA -->
+                    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-isett-700 via-isett-600 to-teal-700 text-white p-6 sm:p-8 shadow-xl shadow-isett-900/10">
+                        <div class="relative z-10 grid lg:grid-cols-[1fr_auto] gap-6 items-center">
+                            <div>
+                                <span class="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-3 py-1 text-[10px] font-extrabold mb-3">
+                                    <i data-lucide="sparkles" class="w-3 h-3 text-amber-300"></i> Alumno Beneficiario PAE
+                                </span>
+                                <h1 class="text-2xl sm:text-3xl font-black">¡Hola, Vega! 👋</h1>
+                                <p class="text-isett-100 text-xs sm:text-sm mt-1 max-w-xl">Confirma si vas a almorzar hoy. Así la cocina prepara la cantidad exacta de raciones y evitamos botar comida.</p>
+                                <div class="flex flex-wrap gap-2 mt-4 text-[10px] font-bold">
+                                    <span class="bg-black/20 px-2.5 py-1 rounded-lg">Curso: 1° Medio B</span>
+                                    <span class="bg-black/20 px-2.5 py-1 rounded-lg">RUT: 21.458.123-K</span>
+                                </div>
+                            </div>
+                            <div class="bg-black/20 glass border border-white/10 rounded-2xl p-4 text-center min-w-[200px]">
+                                <p class="text-[9px] font-bold uppercase tracking-wider text-isett-200">Cierre de Confirmación</p>
+                                <p id="student-timer" class="text-2xl font-black tabular-nums mt-1 text-amber-300">10:00 AM</p>
+                                <label class="flex items-center justify-center gap-1.5 text-[9px] text-isett-100 mt-1 cursor-pointer"><input id="ign" type="checkbox" onchange="db.ign=this.checked;save()" class="accent-emerald-400"> Modo demo (ignorar hora)</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TARJETA DE CONFIRMACIÓN PRINCIPAL -->
+                    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-5">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h2 class="font-black text-base sm:text-lg">Mi Almuerzo de Hoy</h2>
+                                    <span id="student-status-badge" class="status-badge pending">Pendiente</span>
+                                </div>
+                                <p id="student-current-date" class="text-xs text-slate-400 mt-0.5">Cargando fecha...</p>
+                            </div>
+                            <div class="text-xs font-semibold text-slate-500 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-xl w-fit">
+                                Menú del día: <strong id="today-menu" class="text-slate-800 dark:text-slate-200">-</strong>
+                            </div>
+                        </div>
+
+                        <!-- BOTONES ACCIÓN PRINCIPALES -->
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <button onclick="confirmStudentLunch(true)" id="btn-confirm-lunch" class="flex items-center gap-4 p-4 rounded-2xl border-2 border-isett-200 dark:border-isett-900 bg-isett-50/50 dark:bg-isett-950/30 hover:bg-isett-100 dark:hover:bg-isett-900/50 transition text-left group">
+                                <div class="w-12 h-12 rounded-xl bg-isett-500 text-white flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition">
+                                    <i data-lucide="check" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <p class="font-extrabold text-sm text-isett-900 dark:text-isett-200">SÍ voy a almorzar</p>
+                                    <p class="text-[10px] text-isett-700 dark:text-isett-400 mt-0.5">Reserva mi ración en la cocina</p>
+                                </div>
+                            </button>
+
+                            <button onclick="confirmStudentLunch(false)" id="btn-cancel-lunch" class="flex items-center gap-4 p-4 rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition text-left group">
+                                <div class="w-12 h-12 rounded-xl bg-rose-500 text-white flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition">
+                                    <i data-lucide="x" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <p class="font-extrabold text-sm text-rose-900 dark:text-rose-200">NO almorzaré hoy</p>
+                                    <p class="text-[10px] text-rose-700 dark:text-rose-400 mt-0.5">Liberar mi ración para otro compa</p>
+                                </div>
+                            </button>
+                        </div>
+
+                        <!-- PANEL QR AL CONFIRMAR -->
+                        <div id="student-qr-container" class="hidden pt-4 border-t border-slate-100 dark:border-slate-800 fade-in">
+                            <div class="max-w-xs mx-auto bg-slate-900 text-white rounded-3xl p-6 text-center shadow-xl space-y-4">
+                                <div class="flex items-center justify-between text-[10px] text-isett-400 font-bold">
+                                    <span>RACIÓN RESERVADA</span>
+                                    <span>ISETT PAE</span>
+                                </div>
+                                <div class="bg-white p-3 rounded-2xl inline-block shadow-inner">
+                                    <div id="student-qr-code"></div>
+                                </div>
+                                <div>
+                                    <p class="font-black text-sm">Vega Alarcón</p>
+                                    <p class="text-[10px] text-slate-400">Muestra este código al ingresar al casino</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MENSAJE AL CANCELAR -->
+                        <div id="student-cancel-msg" class="hidden p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 text-center fade-in">
+                            <p class="font-extrabold text-xs text-rose-700 dark:text-rose-300">¡Gracias por avisar a tiempo!</p>
+                            <p class="text-[10px] text-rose-600 dark:text-rose-400 mt-1">Tu aviso evita que se cocine una ración de más que terminaría en la basura.</p>
+                        </div>
+                    </div>
+
+                    <!-- MÉTRICAS DE IMPACTO PERSONAL -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="metric-card">
+                            <i data-lucide="leaf" class="w-5 h-5 text-isett-500 mb-2"></i>
+                            <p class="text-[10px] text-slate-400 font-bold">Comida Ahorrada</p>
+                            <p class="text-lg font-black mt-0.5">1.8 kg</p>
+                            <span class="text-[9px] text-isett-600 font-bold">Este mes</span>
+                        </div>
+                        <div class="metric-card">
+                            <i data-lucide="check-circle-2" class="w-5 h-5 text-blue-500 mb-2"></i>
+                            <p class="text-[10px] text-slate-400 font-bold">Asistencias</p>
+                            <p class="text-lg font-black mt-0.5">18 / 20</p>
+                            <span class="text-[9px] text-slate-400">90% cumplimiento</span>
+                        </div>
+                        <div class="metric-card">
+                            <i data-lucide="bell-ring" class="w-5 h-5 text-amber-500 mb-2"></i>
+                            <p class="text-[10px] text-slate-400 font-bold">Avisos a Tiempo</p>
+                            <p class="text-lg font-black mt-0.5">100%</p>
+                            <span class="text-[9px] text-amber-600 font-bold">Responsable</span>
+                        </div>
+                        <div class="metric-card">
+                            <i data-lucide="award" class="w-5 h-5 text-purple-500 mb-2"></i>
+                            <p class="text-[10px] text-slate-400 font-bold">Nivel Sostenible</p>
+                            <p class="text-lg font-black mt-0.5">Eco ⭐</p>
+                            <span class="text-[9px] text-purple-600 font-bold">Excelente</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     2. MENÚ JUNAEB SEMANAL
+                ========================================================== -->
+                <section id="page-student-menu" class="page-section hidden fade-in space-y-6">
+<div><h1 class="text-2xl font-black">Menú semanal JUNAEB</h1><p class="text-xs text-slate-400">Minuta del liceo. Cada ración incluye plato de fondo, ensalada y postre o fruta.</p></div>
+<div id="menu-grid" class="grid sm:grid-cols-2 lg:grid-cols-5 gap-3"></div></section>
+
+                <!-- =========================================================
+                     3. IMPACTO ECOLÓGICO
+                ========================================================== -->
+                <section id="page-student-impact" class="page-section hidden fade-in space-y-6">
+<div><h1 class="text-2xl font-black">Impacto social y ecológico</h1><p class="text-xs text-slate-400">Lo que logramos avisando la ausencia a tiempo en el ISETT.</p></div>
+<div class="p-6 rounded-3xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white space-y-3">
+<p class="text-xs font-bold text-emerald-200">Ahorro acumulado del liceo</p><p id="im-kg" class="text-4xl sm:text-5xl font-black">0 kg</p>
+<div class="w-full bg-white/20 h-2.5 rounded-full overflow-hidden"><div id="im-bar" class="bg-amber-300 h-full rounded-full" style="width:0"></div></div>
+<p class="text-xs text-emerald-100">Meta semestral: 500 kg. Llevamos <b id="im-pct">0%</b>.</p></div>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+<div class="metric-card"><p class="text-[10px] font-bold text-slate-400">Raciones evitadas</p><p id="im-meals" class="text-xl font-black text-isett-600"></p></div>
+<div class="metric-card"><p class="text-[10px] font-bold text-slate-400">CO₂ evitado (estimado)</p><p id="im-co2" class="text-xl font-black text-isett-600"></p></div>
+<div class="metric-card col-span-2 sm:col-span-1"><p class="text-[10px] font-bold text-slate-400">Avisos de hoy</p><p id="im-today" class="text-xl font-black text-isett-600"></p></div></div>
+<div class="card space-y-2"><h3 class="font-extrabold text-sm">Cómo ayudar</h3>
+<p class="text-xs text-slate-500">Avisa antes de las 10:00 si no almorzarás. Retira solo lo que vas a comer. Si te sobra fruta, déjala en el punto de reparto.</p></div></section>
+
+                <!-- =========================================================
+                     4. ESCÁNER QR COCINA
+                ========================================================== -->
+                <section id="page-kitchen-scanner" class="page-section hidden fade-in space-y-6">
+<div><span class="text-[10px] font-black uppercase tracking-wider text-amber-600">Casino ISETT</span><h1 class="text-2xl font-black">Escáner de validación QR</h1><p class="text-xs text-slate-400">Valida la entrega con el QR, el RUT o el nombre del estudiante.</p></div>
+<div class="grid lg:grid-cols-2 gap-4">
+<div class="card space-y-4 text-center">
+<div class="relative w-56 h-56 mx-auto rounded-2xl bg-slate-950 flex flex-col items-center justify-center border-4 border-isett-500 overflow-hidden"><i data-lucide="scan" class="w-16 h-16 text-isett-500"></i><p class="text-[10px] text-slate-400 mt-2">Cámara simulada</p><div class="scan-line"></div></div>
+<div class="flex gap-2"><input id="scan-q" onkeydown="if(event.key==='Enter')scanInput()" placeholder="RUT, código RAI o nombre" class="inp flex-1"><button onclick="scanInput()" class="btn">Validar</button></div>
+<div class="grid grid-cols-2 gap-2"><button onclick="simulateScan(1)" class="btn-alt">Escanear a Vega</button><button onclick="randomScan()" class="btn-alt">Alumno al azar</button></div>
+<div id="scan-res" class="hidden"></div></div>
+<div class="card"><div class="flex justify-between items-center mb-3"><h3 class="font-extrabold text-sm">Últimas validaciones</h3><span id="scan-count" class="pill"></span></div>
+<ul id="scan-log" class="divide-y divide-slate-100 dark:divide-slate-800 text-xs"></ul></div></div></section>
+
+                <!-- =========================================================
+                     5. CONTROL DE RACIONES COCINA
+                ========================================================== -->
+                <section id="page-kitchen-dashboard" class="page-section hidden fade-in space-y-6">
+<div><h1 class="text-2xl font-black">Panel de cocina y manipuladoras</h1><p class="text-xs text-slate-400">Raciones a preparar hoy, calculadas en tiempo real con los avisos.</p></div>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3"><div class="metric-card"><p class="text-[10px] font-bold text-slate-400">Beneficiarios PAE</p><p id="k-tot" class="text-xl font-black ">0</p></div><div class="metric-card"><p class="text-[10px] font-bold text-slate-400">Confirmados</p><p id="k-confirmed-cnt" class="text-xl font-black text-isett-600">0</p></div><div class="metric-card"><p class="text-[10px] font-bold text-slate-400">Ausentes avisados</p><p id="k-cancelled-cnt" class="text-xl font-black text-rose-500">0</p></div><div class="metric-card"><p class="text-[10px] font-bold text-slate-400">Pendientes</p><p id="k-pending-cnt" class="text-xl font-black text-amber-500">0</p></div></div>
+<div class="card space-y-3"><div class="flex justify-between text-xs font-bold"><span>Entregadas <span id="k-served"></span></span><span id="k-pct" class="text-isett-600"></span></div>
+<div class="w-full h-3 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex"><div id="k-bar-s" class="bg-isett-600 h-full"></div><div id="k-bar-c" class="bg-isett-500/40 h-full"></div></div></div>
+<div class="card space-y-4"><div class="flex flex-wrap justify-between gap-2"><h3 class="font-extrabold text-sm">Insumos para hoy</h3><span id="k-menu" class="pill"></span></div>
+<div id="k-ins" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div><p class="text-[10px] text-slate-400">Cantidades con 5% de margen sobre las raciones confirmadas.</p></div>
+<div class="card space-y-3"><h3 class="font-extrabold text-sm">Regímenes especiales confirmados</h3><div id="k-reg" class="flex flex-wrap gap-2"></div></div></section>
+
+                <!-- =========================================================
+                     6. RACIONES SOBRANTES
+                ========================================================== -->
+                <section id="page-kitchen-surplus" class="page-section hidden fade-in space-y-6">
+<div><h1 class="text-2xl font-black">Gestión de raciones sobrantes</h1><p class="text-xs text-slate-400">Los almuerzos liberados pasan a estudiantes sin beca PAE en lista de espera.</p></div>
+<div class="grid lg:grid-cols-2 gap-4"><div class="card text-center space-y-4">
+<div class="w-16 h-16 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center"><i data-lucide="repeat" class="w-8 h-8"></i></div>
+<p id="sp-n" class="text-3xl font-black text-amber-500"></p>
+<p class="text-xs text-slate-400">Reasignadas hoy: <b id="sp-done"></b> · En lista de espera: <b id="sp-wl"></b></p>
+<button onclick="releaseSurplus()" class="px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition">Reasignar a lista de espera</button></div>
+<div class="card"><h3 class="font-extrabold text-sm mb-2">Próximos en la lista</h3><ul id="sp-list" class="divide-y divide-slate-100 dark:divide-slate-800 text-xs"></ul></div></div></section>
+
+                <!-- =========================================================
+                     7. FEEDBACK DESPERDICIO
+                ========================================================== -->
+                <section id="page-kitchen-waste" class="page-section hidden fade-in space-y-6">
+<div><h1 class="text-2xl font-black">Registro de desperdicio real</h1><p class="text-xs text-slate-400">Kilos de comida botada al final de la jornada.</p></div>
+<div class="grid lg:grid-cols-2 gap-4"><div class="card space-y-4"><p class="font-extrabold text-sm">Kilos botados hoy</p>
+<input id="waste-input" type="number" min="0" step="0.1" placeholder="Ej: 2.5" class="inp w-full">
+<button onclick="saveWasteLog()" class="btn w-full">Guardar registro diario</button>
+<div class="grid grid-cols-2 gap-3"><div class="metric-card"><p class="text-[10px] font-bold text-slate-400">Promedio 7 días</p><p id="w-avg" class="text-lg font-black"></p></div><div class="metric-card"><p class="text-[10px] font-bold text-slate-400">Último día</p><p id="w-pp" class="text-lg font-black"></p></div></div></div>
+<div class="card"><h3 class="font-extrabold text-sm mb-3">Últimos 7 registros (kg)</h3><div id="w-chart" class="flex items-end gap-2 h-40"></div></div></div></section>
+
+                <!-- =========================================================
+                     8. VISTA INSPECTORÍA
+                ========================================================== -->
+                <section id="page-inspector-view" class="page-section hidden fade-in space-y-6">
+<div><h1 class="text-2xl font-black">Marcaje de asistencia por curso</h1><p class="text-xs text-slate-400">Herramienta para profesores jefes e inspectoría.</p></div>
+<div class="card space-y-4">
+<div class="flex flex-col lg:flex-row gap-2 justify-between"><div class="flex flex-wrap gap-2">
+<select id="course-select" onchange="renderStudentsTable()" class="inp"></select>
+<select id="status-filter" onchange="renderStudentsTable()" class="inp"><option value="all">Todos los estados</option><option value="confirmed">Confirmados</option><option value="cancelled">Ausentes</option><option value="pending">Pendientes</option><option value="nopae">Sin beca PAE</option></select>
+<input id="student-search-input" oninput="renderStudentsTable()" placeholder="Buscar nombre o RUT" class="inp"></div>
+<div class="flex gap-2"><button onclick="bulkConfirm()" class="btn">Confirmar pendientes</button><button onclick="exportCSV()" class="btn-alt">Exportar CSV</button></div></div>
+<div id="t-sum" class="flex flex-wrap gap-2"></div>
+<div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead><tr class="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-black"><th class="p-3">Estudiante</th><th class="p-3">RUT</th><th class="p-3">Curso</th><th class="p-3">Estado PAE</th><th class="p-3">Acción</th></tr></thead><tbody id="students-table-body"></tbody></table></div>
+<div class="flex items-center justify-between text-xs"><span id="t-info" class="text-slate-400"></span><div class="flex gap-2"><button onclick="pg--;renderStudentsTable(false)" class="btn-alt">Anterior</button><button onclick="pg++;renderStudentsTable(false)" class="btn-alt">Siguiente</button></div></div></div></section>
+
+                <!-- =========================================================
+                     9. VISTA ADMINISTRACIÓN
+                ========================================================== -->
+                <section id="page-admin-view" class="page-section hidden fade-in space-y-6">
+<div><h1 class="text-2xl font-black">Reporte general JUNAEB</h1><p class="text-xs text-slate-400">Resumen ejecutivo del impacto del sistema RAI.</p></div>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3"><div class="metric-card"><p class="text-[10px] font-bold text-slate-400">Beneficiarios</p><p id="a-tot" class="text-xl font-black ">0</p></div><div class="metric-card"><p class="text-[10px] font-bold text-slate-400">Respuesta a tiempo</p><p id="a-resp" class="text-xl font-black text-isett-600">0</p></div><div class="metric-card"><p class="text-[10px] font-bold text-slate-400">Entregadas / confirmadas</p><p id="a-eff" class="text-xl font-black text-blue-500">0</p></div><div class="metric-card"><p class="text-[10px] font-bold text-slate-400">Comida ahorrada</p><p id="a-kg" class="text-xl font-black text-purple-500">0</p></div></div>
+<div class="grid lg:grid-cols-2 gap-4"><div class="card space-y-3"><h3 class="font-black text-base">Confirmación por nivel</h3><div id="a-lv" class="space-y-3 text-xs font-bold"></div></div>
+<div class="card space-y-3"><h3 class="font-black text-base">Cursos con más pendientes</h3><ul id="a-low" class="divide-y divide-slate-100 dark:divide-slate-800 text-xs"></ul></div></div>
+<button onclick="window.print()" class="px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold text-xs">Imprimir reporte oficial</button></section>
+
+            </main>
+        </div>
+
+        <!-- BARRA NAVEGACIÓN INFERIOR MÓVIL -->
+        <nav class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 glass border-t border-slate-200 dark:border-slate-800">
+            <div class="grid grid-cols-4 h-16">
+                <button onclick="goTo(\'student-dash\')" data-nav="student-dash" class="mobile-tab active">
+                    <i data-lucide="home"></i>
+                    <span>Inicio</span>
+                </button>
+                <button onclick="goTo(\'kitchen-scanner\')" data-nav="kitchen-scanner" class="mobile-tab">
+                    <i data-lucide="qr-code"></i>
+                    <span>Escáner</span>
+                </button>
+                <button onclick="goTo(\'inspector-view\')" data-nav="inspector-view" class="mobile-tab">
+                    <i data-lucide="users"></i>
+                    <span>Cursos</span>
+                </button>
+                <button onclick="goTo(\'admin-view\')" data-nav="admin-view" class="mobile-tab">
+                    <i data-lucide="bar-chart-3"></i>
+                    <span>Reporte</span>
+                </button>
+            </div>
+        </nav>
+
+        <div id="role-modal" class="fixed inset-0 z-[150] hidden items-center justify-center bg-slate-900/60 p-4" onclick="if(event.target===this)closeRoles()"><div class="card w-full max-w-sm space-y-2"><h3 class="font-black text-base mb-2">Cambiar vista de simulación</h3><div id="role-list" class="space-y-2"></div></div></div>
+        <!-- TOAST FLOTANTE NOTIFICACIONES -->
+        <div id="toast" class="fixed bottom-20 lg:bottom-6 right-6 z-50 hidden fade-in">
+            <div class="bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-800 dark:border-slate-200">
+                <div class="w-7 h-7 rounded-lg bg-isett-500 text-white flex items-center justify-center font-bold text-xs">✓</div>
+                <p id="toast-msg" class="text-xs font-bold">Notificación</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+const icons = () => { try { lucide.createIcons(); } catch (e) {} };
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const iso = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+const KEY = 'rai_v2';
+let db = { st: {}, sv: {}, waste: [], log: [], theme: null, ign: true, reasig: 0 };
+try { Object.assign(db, JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
+
+// ---------- Datos: ~1.500 estudiantes simulados ----------
+const GRADES = ['7° Básico', '8° Básico', '1° Medio', '2° Medio', '3° Medio', '4° Medio'];
+const COURSES = GRADES.flatMap(g => 'ABCDE'.split('').map(s => g + ' ' + s));
+const NOM = ['Sofía','Martina','Isidora','Constanza','Fernanda','Valentina','Camila','Javiera','Antonia','Catalina','Matías','Benjamín','Vicente','Sebastián','Joaquín','Tomás','Diego','Nicolás','Maximiliano','Agustín','Florencia','Emilia','Gaspar','Lucas','Ignacio','Francisca','Amanda','Bastián','Cristóbal','Dante'];
+const APE = ['González','Muñoz','Rojas','Díaz','Pérez','Soto','Contreras','Silva','Martínez','Sepúlveda','Morales','Rodríguez','López','Fuentes','Hernández','Torres','Araya','Flores','Espinoza','Valenzuela','Castillo','Tapia','Reyes','Gutiérrez','Castro','Pizarro','Álvarez','Vásquez','Sánchez','Fernández','Cárdenas','Henríquez','Loyola','Alarcón','Catrileo','Millalén','Huenchullán','Painemal'];
+const REG = ['Celíaco', 'Diabético', 'Vegetariano', 'Alergia alimentaria', 'Hipertenso'];
+const LBL = { confirmed: 'Confirmado', cancelled: 'Ausente', pending: 'Pendiente' };
+const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+function dv(n) { let s = 0, m = 2; for (let x = n; x > 0; x = Math.floor(x / 10)) { s += (x % 10) * m; m = m === 7 ? 2 : m + 1; } const r = 11 - s % 11; return r === 11 ? '0' : r === 10 ? 'K' : String(r); }
+const rutF = n => n.toLocaleString('es-CL') + '-' + dv(n);
+
+function build() {
+    const out = [
+        { id: 1, name: 'Vega Alarcón', course: '1° Medio B', rut: '21.458.123-K', status: 'pending', served: false, reg: '', pae: true },
+        { id: 2, name: 'Constanza Silva', course: '1° Medio A', rut: '21.321.889-1', status: 'confirmed', served: true, reg: '', pae: true },
+        { id: 3, name: 'Matías Loyola', course: '1° Medio B', rut: '21.990.455-2', status: 'cancelled', served: false, reg: '', pae: true },
+        { id: 4, name: 'Sofía Henríquez', course: '2° Medio A', rut: '20.871.332-9', status: 'confirmed', served: false, reg: '', pae: true }
+    ];
+    const r = mulberry(2026), pick = a => a[Math.floor(r() * a.length)];
+    let id = 5;
+    COURSES.forEach(c => {
+        const n = 28 + Math.floor(r() * 9);
+        for (let i = 0; i < n; i++, id++) {
+            const x = r(), pae = r() < .88, st = !pae ? 'pending' : x < .72 ? 'confirmed' : x < .85 ? 'cancelled' : 'pending';
+            out.push({ id, name: pick(NOM) + ' ' + pick(APE) + ' ' + pick(APE), course: c, rut: rutF(7e6 + Math.floor(r() * 14e6)), status: st, served: st === 'confirmed' && r() < .55, reg: r() < .12 ? pick(REG) : '', pae });
+        }
+    });
+    return out;
+}
+const students = build();
+const MAP = new Map(students.map(s => [s.id, s]));
+students.forEach(s => { if (db.st[s.id]) s.status = db.st[s.id]; if (db.sv[s.id]) s.served = true; });
+
+const MENU = [
+    ['Lunes', 'Pollo al jugo con arroz', 'Ensalada de tomate y fruta de estación', [['Arroz', .08], ['Pollo', .15], ['Verduras', .05], ['Frutas', 0]]],
+    ['Martes', 'Guiso de lentejas', 'Ensalada de lechuga y postre de leche', [['Lentejas', .07], ['Verduras', .08], ['Lechuga', .04], ['Postres de leche', 0]]],
+    ['Miércoles', 'Pescado al horno con puré', 'Ensalada mixta y fruta', [['Pescado', .14], ['Papas', .2], ['Verduras', .05], ['Frutas', 0]]],
+    ['Jueves', 'Charquicán con huevo', 'Ensalada de repollo y jalea', [['Papas', .12], ['Carne', .06], ['Huevos', 0], ['Jaleas', 0]]],
+    ['Viernes', 'Tallarines con salsa boloñesa', 'Ensalada verde y fruta', [['Fideos', .09], ['Carne molida', .07], ['Verduras', .05], ['Frutas', 0]]]
+];
+const todayIdx = () => { const d = new Date().getDay(); return d >= 1 && d <= 5 ? d - 1 : 0; };
+
+function stats(list) {
+    list = list || students.filter(s => s.pae);
+    const c = list.filter(s => s.status === 'confirmed').length, x = list.filter(s => s.status === 'cancelled').length;
+    return { tot: list.length, c, x, p: list.length - c - x, sv: list.filter(s => s.served).length };
+}
+function setStatus(id, st) {
+    const s = MAP.get(id); s.status = st;
+    if (st !== 'confirmed') { s.served = false; delete db.sv[id]; }
+    db.st[id] = st; save();
+}
+
+// ---------- Inicio ----------
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => { const sp = $('splash-screen'); sp.classList.add('opacity-0'); setTimeout(() => sp.remove(), 500); }, 1200);
+    setupStyles();
+    if (db.theme === null) db.theme = matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme();
+    $('course-select').innerHTML = '<option value="all">Todos los cursos (' + students.length + ')</option>' + COURSES.map(c => `<option value="${c}">${c}</option>`).join('');
+    $('course-select').value = '1° Medio B';
+    $('ign').checked = db.ign;
+    if (!db.waste.length) {
+        [18.5, 22.1, 15.8, 19.4, 24.6, 17.2].forEach((kg, i) => { const d = new Date(Date.now() - (6 - i) * 864e5); db.waste.push({ d: new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10), kg }); });
+    }
+    menuUI(); tick(); setInterval(tick, 1000); refresh(); icons();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeRoles(); } });
+
+function setupStyles() { /* estilos movidos al <style> principal */ }
+
+function tick() {
+    const now = new Date(), dl = new Date(now); dl.setHours(10, 0, 0, 0);
+    const ms = dl - now, p = v => String(v).padStart(2, '0'), s = Math.floor(ms / 1000);
+    $('header-clock').textContent = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const d = now.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    $('student-current-date').textContent = d.charAt(0).toUpperCase() + d.slice(1);
+    $('student-timer').textContent = ms > 0 ? `${p(Math.floor(s / 3600))}:${p(Math.floor(s % 3600 / 60))}:${p(s % 60)}` : 'Cerrado';
+}
+
+function menuUI() {
+    const t = todayIdx(), m = MENU[t];
+    $('today-menu').textContent = m[1] + ' · ' + m[2];
+    $('menu-grid').innerHTML = MENU.map((d, i) => i === t
+        ? `<div class="p-4 rounded-2xl bg-isett-50 dark:bg-isett-950/30 border-2 border-isett-500 space-y-3"><span class="px-2 py-0.5 rounded-full bg-isett-500 text-white text-[8px] font-black">Hoy</span><p class="text-xs font-black text-isett-700 dark:text-isett-300">${d[0]}</p><div><p class="font-bold text-sm">${d[1]}</p><p class="text-[10px] text-slate-500 mt-0.5">${d[2]}</p></div></div>`
+        : `<div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3"><p class="text-xs font-black text-slate-400">${d[0]}</p><div><p class="font-bold text-sm">${d[1]}</p><p class="text-[10px] text-slate-500 mt-0.5">${d[2]}</p></div></div>`).join('');
+}
+
+// ---------- Tema, navegación, roles ----------
+function applyTheme() { document.documentElement.classList.toggle('dark', !!db.theme); $('theme-icon').setAttribute('data-lucide', db.theme ? 'sun' : 'moon'); icons(); }
+function toggleDarkMode() { db.theme = !db.theme; save(); applyTheme(); }
+function toggleSidebar() { $('sidebar').classList.toggle('-translate-x-full'); $('sidebar-overlay').classList.toggle('hidden'); }
+function goTo(id) {
+    document.querySelectorAll('.page-section').forEach(s => s.classList.add('hidden'));
+    const t = $('page-' + id); if (t) t.classList.remove('hidden');
+    document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
+    $('sidebar').classList.add('-translate-x-full'); $('sidebar-overlay').classList.add('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' }); icons();
+}
+const ROLES = [['Estudiante', 'Vega Alarcón', 'Estudiante 1°B', 'VA', 'student-dash'], ['Cocina', 'Manipuladora', 'Casino ISETT', 'MC', 'kitchen-dashboard'], ['Inspectoría', 'Encargado PAE', 'Inspectoría general', 'IN', 'inspector-view'], ['Administración', 'Dirección ISETT', 'Reporte JUNAEB', 'AD', 'admin-view']];
+function openRoleSelector() {
+    $('role-list').innerHTML = ROLES.map((r, i) => `<button onclick="setRole(${i})" class="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-left"><span class="w-8 h-8 rounded-lg bg-isett-600 text-white flex items-center justify-center text-[10px] font-black">${r[3]}</span><span><b class="text-xs">${r[0]}</b><br><span class="text-[10px] text-slate-400">${r[2]}</span></span></button>`).join('');
+    $('role-modal').classList.remove('hidden'); $('role-modal').classList.add('flex');
+}
+function closeRoles() { $('role-modal').classList.add('hidden'); $('role-modal').classList.remove('flex'); }
+function setRole(i) { const r = ROLES[i]; $('role-avatar').textContent = r[3]; $('role-name').textContent = r[1]; $('role-title').textContent = r[2]; closeRoles(); goTo(r[4]); }
+
+// ---------- Estudiante ----------
+function confirmStudentLunch(y) {
+    if (!db.ign && new Date().getHours() >= 10) { showToast('La confirmación cerró a las 10:00'); return; }
+    setStatus(1, y ? 'confirmed' : 'cancelled'); refresh();
+    showToast(y ? '¡Almuerzo reservado!' : 'Aviso de ausencia registrado');
+}
+function loadStudentStatus() {
+    const st = MAP.get(1).status, b = $('student-status-badge');
+    b.className = 'status-badge ' + st;
+    b.textContent = st === 'confirmed' ? '✓ Confirmado' : st === 'cancelled' ? '✕ Ausente avisado' : 'Pendiente';
+    $('student-qr-container').classList.toggle('hidden', st !== 'confirmed');
+    $('student-cancel-msg').classList.toggle('hidden', st !== 'cancelled');
+    if (st === 'confirmed') generateQR();
+}
+function generateQR() {
+    const c = $('student-qr-code'); c.innerHTML = '';
+    if (window.QRCode) new QRCode(c, { text: 'RAI-ISETT-1', width: 120, height: 120, colorDark: '#0f172a', colorLight: '#ffffff' });
+}
+
+// ---------- Cocina ----------
+function kitchen() {
+    const S = stats(), m = MENU[todayIdx()];
+    $('k-tot').textContent = S.tot; $('k-confirmed-cnt').textContent = S.c; $('k-cancelled-cnt').textContent = S.x; $('k-pending-cnt').textContent = S.p;
+    $('k-served').textContent = `${S.sv} de ${S.c}`; $('k-pct').textContent = (S.c ? Math.round(S.sv / S.c * 100) : 0) + '% servido';
+    $('k-bar-s').style.width = (S.sv / S.tot * 100) + '%'; $('k-bar-c').style.width = ((S.c - S.sv) / S.tot * 100) + '%';
+    $('k-menu').textContent = m[0] + ': ' + m[1];
+    $('k-ins').innerHTML = m[3].map(([n, q]) => `<div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800"><p class="text-[10px] text-slate-400 font-bold">${n}</p><p class="text-base font-black text-isett-600 mt-1">${q ? (S.c * q * 1.05).toFixed(1) + ' kg' : Math.ceil(S.c * 1.05) + ' un.'}</p></div>`).join('');
+    const g = {}; students.filter(s => s.pae && s.status === 'confirmed' && s.reg).forEach(s => g[s.reg] = (g[s.reg] || 0) + 1);
+    $('k-reg').innerHTML = REG.map(r => `<span class="pill">${r}: ${g[r] || 0}</span>`).join('');
+}
+const TONE = {
+    emerald: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900',
+    rose: 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900',
+    amber: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900'
+};
+function scanRes(t, m, c) { const r = $('scan-res'); r.className = 'p-3 rounded-xl border text-left fade-in ' + TONE[c]; r.innerHTML = `<p class="font-extrabold text-xs">${esc(t)}</p><p class="text-[11px] mt-0.5">${esc(m)}</p>`; }
+function findQ(q) {
+    q = q.trim().toLowerCase(); if (!q) return null;
+    const m = q.match(/^rai-isett-(\d+)$/); if (m) return MAP.get(+m[1]);
+    const n = q.replace(/[.\s]/g, '');
+    return students.find(s => s.rut.replace(/\./g, '').toLowerCase() === n) || students.find(s => s.name.toLowerCase().includes(q));
+}
+function scanInput() { const s = findQ($('scan-q').value); if (!s) { scanRes('No encontrado', 'Revisa el RUT, el código o el nombre.', 'rose'); return; } simulateScan(s.id); }
+function simulateScan(id) {
+    const s = MAP.get(id); let t, c;
+    if (!s.pae) { t = 'Sin beca PAE'; c = 'amber'; }
+    else if (s.status === 'cancelled') { t = 'Ración liberada'; c = 'rose'; }
+    else if (s.served) { t = 'Ya recibió su ración'; c = 'amber'; }
+    else if (s.status !== 'confirmed') { t = 'Sin reserva'; c = 'amber'; }
+    else { s.served = true; db.sv[id] = 1; t = 'Ración entregada'; c = 'emerald'; }
+    db.log.unshift({ n: s.name, c: s.course, r: t, k: c, h: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) });
+    db.log = db.log.slice(0, 12); save();
+    scanRes(t, `${s.name} · ${s.course}${s.reg ? ' · Régimen: ' + s.reg : ''}`, c); refresh(true);
+}
+function randomScan() {
+    const l = students.filter(s => s.pae && s.status === 'confirmed' && !s.served);
+    if (!l.length) { showToast('No quedan raciones por entregar'); return; }
+    simulateScan(l[Math.floor(Math.random() * l.length)].id);
+}
+function scanUI() {
+    $('scan-count').textContent = stats().sv + ' entregadas';
+    $('scan-log').innerHTML = db.log.length ? db.log.map(l => `<li class="py-2 flex justify-between gap-2"><span><b>${esc(l.n)}</b><br><span class="text-slate-400">${l.c} · ${l.h}</span></span><span class="font-bold ${l.k === 'emerald' ? 'text-emerald-600' : l.k === 'rose' ? 'text-rose-600' : 'text-amber-600'}">${l.r}</span></li>`).join('') : '<li class="py-6 text-center text-slate-400">Aún no hay validaciones. Escanea un código para empezar.</li>';
+}
+function surplus() {
+    const S = stats(), wl = students.filter(s => !s.pae), av = Math.max(0, S.x - db.reasig);
+    $('sp-n').textContent = av + ' raciones'; $('sp-done').textContent = db.reasig; $('sp-wl').textContent = wl.length - db.reasig;
+    $('sp-list').innerHTML = wl.slice(db.reasig, db.reasig + 6).map(s => `<li class="py-2">${esc(s.name)} <span class="text-slate-400">· ${s.course}</span></li>`).join('') || '<li class="py-4 text-slate-400">La lista de espera está vacía.</li>';
+}
+function releaseSurplus() {
+    const wl = students.filter(s => !s.pae).length, n = Math.min(Math.max(0, stats().x - db.reasig), wl - db.reasig);
+    if (n <= 0) { showToast('No hay raciones para reasignar'); return; }
+    db.reasig += n; save(); refresh(); showToast(n + ' raciones reasignadas');
+}
+function wasteUI() {
+    const l = db.waste.slice(-7), mx = Math.max(...l.map(w => w.kg), 1), avg = l.reduce((a, w) => a + w.kg, 0) / l.length, last = l[l.length - 1], c = stats().c || 1;
+    $('w-chart').innerHTML = l.map(w => `<div class="flex-1 flex flex-col items-center justify-end gap-1 h-full"><span class="text-[9px] font-bold">${w.kg}</span><div class="w-full rounded-t-lg bg-isett-500" style="height:${Math.round(w.kg / mx * 100)}px"></div><span class="text-[9px] text-slate-400">${w.d.slice(8)}/${w.d.slice(5, 7)}</span></div>`).join('');
+    $('w-avg').textContent = avg.toFixed(1) + ' kg'; $('w-pp').textContent = Math.round(last.kg * 1000 / c) + ' g/ración';
+}
+function saveWasteLog() {
+    const v = parseFloat($('waste-input').value);
+    if (!(v >= 0)) { showToast('Ingresa un valor válido en kg'); return; }
+    const d = iso(), i = db.waste.findIndex(w => w.d === d);
+    if (i >= 0) db.waste[i].kg = v; else db.waste.push({ d, kg: v });
+    save(); $('waste-input').value = ''; wasteUI(); showToast(`Registro guardado: ${v} kg botados`);
+}
+
+// ---------- Inspectoría ----------
+let pg = 0; const PS = 25;
+function filt() {
+    const c = $('course-select').value, f = $('status-filter').value, q = $('student-search-input').value.toLowerCase();
+    return students.filter(s => (c === 'all' || s.course === c) && (f === 'all' || (f === 'nopae' ? !s.pae : s.pae && s.status === f)) && (!q || s.name.toLowerCase().includes(q) || s.rut.includes(q)));
+}
+function renderStudentsTable(reset) {
+    if (reset !== false) pg = 0;
+    const l = filt(), pages = Math.max(1, Math.ceil(l.length / PS)); pg = Math.max(0, Math.min(pg, pages - 1));
+    const S = stats(l.filter(s => s.pae));
+    $('t-sum').innerHTML = `<span class="pill">${l.length} estudiantes</span><span class="pill">${S.c} confirmados</span><span class="pill">${S.x} ausentes</span><span class="pill">${S.p} pendientes</span>`;
+    $('students-table-body').innerHTML = l.slice(pg * PS, pg * PS + PS).map(s => `<tr class="border-b border-slate-100 dark:border-slate-800/50"><td class="p-3 font-bold">${esc(s.name)}${s.reg ? ` <span class="pill">${s.reg}</span>` : ''}</td><td class="p-3 text-slate-400">${s.rut}</td><td class="p-3 text-slate-400">${s.course}</td><td class="p-3">${s.pae ? `<span class="status-badge ${s.status}">${LBL[s.status]}${s.served ? ' · servido' : ''}</span>` : '<span class="pill">Sin beca</span>'}</td><td class="p-3">${s.pae ? `<button onclick="toggleStudentStatus(${s.id})" class="btn-alt !py-1 !px-2.5 !text-[10px]">Cambiar</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="p-8 text-center text-slate-400">Ningún estudiante coincide con los filtros.</td></tr>';
+    $('t-info').textContent = l.length ? `Mostrando ${pg * PS + 1}–${Math.min(l.length, pg * PS + PS)} de ${l.length}` : '';
+}
+function toggleStudentStatus(id) {
+    const n = { confirmed: 'cancelled', cancelled: 'pending', pending: 'confirmed' };
+    setStatus(id, n[MAP.get(id).status]); refresh(); showToast('Estado actualizado');
+}
+function bulkConfirm() {
+    const l = filt().filter(s => s.pae && s.status === 'pending');
+    if (!l.length) { showToast('No hay pendientes en esta vista'); return; }
+    l.forEach(s => { s.status = 'confirmed'; db.st[s.id] = 'confirmed'; }); save(); refresh(); showToast(l.length + ' estudiantes confirmados');
+}
+function exportCSV() {
+    const rows = [['Nombre', 'RUT', 'Curso', 'Estado', 'Entregado', 'Régimen', 'Beca PAE'], ...filt().map(s => [s.name, s.rut, s.course, LBL[s.status], s.served ? 'Sí' : 'No', s.reg || '-', s.pae ? 'Sí' : 'No'])];
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\ufeff' + rows.map(r => r.map(v => `"${v}"`).join(';')).join('\n')], { type: 'text/csv' }));
+    a.download = 'rai-isett-' + iso() + '.csv'; a.click();
+}
+function goCourse(c) { $('course-select').value = c; $('status-filter').value = 'pending'; renderStudentsTable(); goTo('inspector-view'); }
+
+// ---------- Administración e impacto ----------
+function admin() {
+    const S = stats();
+    $('a-tot').textContent = S.tot; $('a-resp').textContent = Math.round((S.c + S.x) / S.tot * 100) + '%';
+    $('a-eff').textContent = (S.c ? Math.round(S.sv / S.c * 100) : 0) + '%'; $('a-kg').textContent = (S.x * .35).toFixed(1) + ' kg';
+    $('a-lv').innerHTML = GRADES.map(g => {
+        const s = stats(students.filter(x => x.pae && x.course.startsWith(g))), p = Math.round(s.c / s.tot * 100);
+        return `<div><div class="flex justify-between"><span>${g}</span><span class="text-isett-600">${p}%</span></div><div class="w-full bg-slate-100 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden mt-1"><div class="bg-isett-500 h-full" style="width:${p}%"></div></div></div>`;
+    }).join('');
+    $('a-low').innerHTML = COURSES.map(c => [c, stats(students.filter(s => s.pae && s.course === c)).p]).sort((a, b) => b[1] - a[1]).slice(0, 5)
+        .map(([c, p]) => `<li class="py-2 flex justify-between items-center"><span class="font-bold">${c}</span><button onclick="goCourse('${c}')" class="btn-alt !py-1 !px-2.5 !text-[10px]">${p} pendientes</button></li>`).join('');
+}
+function impact() {
+    const S = stats(), kg = 142.5 + S.x * .35;
+    $('im-kg').textContent = kg.toFixed(1) + ' kg'; $('im-pct').textContent = Math.min(100, Math.round(kg / 5)) + '%'; $('im-bar').style.width = Math.min(100, kg / 5) + '%';
+    $('im-meals').textContent = Math.round(kg / .35); $('im-co2').textContent = '≈ ' + Math.round(kg * 2.5) + ' kg'; $('im-today').textContent = S.x;
+}
+
+function refresh(skipTable) {
+    loadStudentStatus(); kitchen(); scanUI(); surplus(); wasteUI(); admin(); impact();
+    if (!skipTable || true) renderStudentsTable(false);
+}
+let tt;
+function showToast(msg) {
+    $('toast-msg').textContent = msg; $('toast').classList.remove('hidden'); clearTimeout(tt);
+    tt = setTimeout(() => $('toast').classList.add('hidden'), 3000);
+}
+
+    </script>
+</body>
+</html>
